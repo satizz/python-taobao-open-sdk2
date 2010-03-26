@@ -4,11 +4,8 @@ import urllib,urllib2,time,md5,simplejson
 
 sercetCode = 'ae6d52f1ed7c45fee636988f15ba2c61'
 api_key = '12032759'
-local_url = 'http://container.open.taobao.com/container?appkey=%s' % api_key
+auth_url = 'http://container.api.taobao.com/container?appkey=%s' % api_key
 taobao_url = 'http://gw.api.taobao.com/router/rest' #淘宝正式环境
-REFERER = ('http://container.api.taobao.com/container?appkey=%s'%api_key,
-           'http://container.open.taobao.com/container?appkey=%s'%api_key)
-
 #taobao_url = 'http://gw.sandbox.taobao.com/router/rest' #淘宝测试环境
 
 error_msg = {
@@ -127,14 +124,14 @@ error_msg = {
 
 class TaoBao(object):
     def __init__(self):
-        self.error_msg = ''
         self.datas = ''
+        self.error_msg = ''
         self.p = dict(
             method = 'taobao.',
             v = '2.0',
             format = 'json',
         )
-    def setParam(self,**kwargs):
+    def setParams(self,**kwargs):
         self.p.update(kwargs)
     def setFields(self,fields):
         self.p['fields'] = fields
@@ -142,7 +139,7 @@ class TaoBao(object):
         if format in ('json','xml'):self.p['format'] = format
     def _sign(self):
         self.p['timestamp'] = time.strftime('%Y-%m-%d %X',time.localtime())
-        self.p['fields'] = self.fields
+        if not self.p.get('fields'): self.p['fields'] = self.fields
         self.p['method'] += self.method
         self.p['api_key'] = api_key
         for k,v in self.p.iteritems():
@@ -164,6 +161,12 @@ class TaoBao(object):
             self.error_msg = error_msg.get(error_code,u'未知错误(%d)'%error_code)
         else:
             rsp = rsp[self.method.replace('.','_') + '_response']
-            self.totalResults = rsp['total_results']
-            if self.totalResults > 0:
-                self.datas = rsp[self.data_name][self.data_type] if self.data_name else rsp[self.data_type]
+            for k,v in rsp.iteritems():
+                if k == self.data_name:
+                    self.datas = v.get(self.data_type)
+                elif k == self.data_type:
+                    self.datas = v
+                else:
+                    setattr(self,k,v)
+            #self.total_results = rsp.get('total_results',0)
+            #self.datas = rsp.get(self.data_name,{}).get(self.data_type) if self.data_name else rsp.get(self.data_type)
