@@ -1,4 +1,4 @@
-from base import local_url
+from base import auth_url
 from itemcats import *
 from items import *
 from itemcats import *
